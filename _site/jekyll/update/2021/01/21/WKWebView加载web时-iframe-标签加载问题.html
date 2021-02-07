@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>WKWebView加载web时&lt;iframe&gt;标签加载问题 | 无聊的博客</title>
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="WKWebView加载web时&lt;iframe&gt;标签加载问题" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="之前做项目的时候有需求是加载 web 并做交互" />
+<meta property="og:description" content="之前做项目的时候有需求是加载 web 并做交互" />
+<link rel="canonical" href="/jekyll/update/2021/01/21/WKWebView%E5%8A%A0%E8%BD%BDweb%E6%97%B6-iframe-%E6%A0%87%E7%AD%BE%E5%8A%A0%E8%BD%BD%E9%97%AE%E9%A2%98.html" />
+<meta property="og:url" content="/jekyll/update/2021/01/21/WKWebView%E5%8A%A0%E8%BD%BDweb%E6%97%B6-iframe-%E6%A0%87%E7%AD%BE%E5%8A%A0%E8%BD%BD%E9%97%AE%E9%A2%98.html" />
+<meta property="og:site_name" content="无聊的博客" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-01-21T09:30:30+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="WKWebView加载web时&lt;iframe&gt;标签加载问题" />
+<script type="application/ld+json">
+{"headline":"WKWebView加载web时&lt;iframe&gt;标签加载问题","dateModified":"2021-01-21T09:30:30+08:00","datePublished":"2021-01-21T09:30:30+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/jekyll/update/2021/01/21/WKWebView%E5%8A%A0%E8%BD%BDweb%E6%97%B6-iframe-%E6%A0%87%E7%AD%BE%E5%8A%A0%E8%BD%BD%E9%97%AE%E9%A2%98.html"},"description":"之前做项目的时候有需求是加载 web 并做交互","url":"/jekyll/update/2021/01/21/WKWebView%E5%8A%A0%E8%BD%BDweb%E6%97%B6-iframe-%E6%A0%87%E7%AD%BE%E5%8A%A0%E8%BD%BD%E9%97%AE%E9%A2%98.html","@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/feed.xml" title="无聊的博客" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">无聊的博客</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">WKWebView加载web时&lt;iframe&gt;标签加载问题</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2021-01-21T09:30:30+08:00" itemprop="datePublished">Jan 21, 2021
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>之前做项目的时候有需求是加载 web 并做交互</p>
+
+<p>按照那个之前的思路就是简单的创建一个 webView (xib 拖的)</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>@property (weak, nonatomic) IBOutlet WKWebView *webView;
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    @weakify(self)
+    self.navigationItem.leftBarButtonItem = [AppTheme backItemWithHandler:^(id sender) {
+        @strongify(self)
+        if (self.webView.canGoBack) {
+            self.tabView.hidden = YES;
+            self.tabViewHeightLC.constant = 0;
+            self.webState = WKWebStateWebView;
+            [self.webView goBack];
+        } else {
+            [self.navigationController popViewControllerAnimated:YES];
+        }
+    }];
+    
+    self.webView.configuration.allowsInlineMediaPlayback = YES;
+    self.webView.navigationDelegate = self;
+//    self.webView.allowsBackForwardNavigationGestures = YES;
+    self.webView.scrollView.delegate = self;
+    [self.webView addObserver:self forKeyPath:@"estimatedProgress" options:NSKeyValueObservingOptionNew context:nil];
+    
+    NSURL *url = [NSURL URLWithString:[self stringHandle:self.webURL]];
+    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:url];
+    [self.webView loadRequest:request];
+}
+
+#pragma mark - WKNavigationDelegat
+
+......
+
+#pragma mark - WKScriptMessageHandler
+
+......
+
+</code></pre></div></div>
+
+<p>但是在运行打开 web 的时候由于 web 里面添加了 &lt;iframe&gt; 标签进行部分模块资源的二次加载，造成 webView 的 reload 十分影响用户体验</p>
+
+<p>为此在经过思考和询问前端的同学以后，决定通过 JS 注入的方式让移除/禁用掉 &lt;iframe&gt; 标签来预防此事</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// 可以加个判断在主 web URL 加载完成后进行注入， &lt;iframe&gt; 标签是在当前 web 加载完成后立即加载
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+    [self.webView evaluateJavaScript:@"document.querySelectorAll('iframe').forEach(function (item) { item.remove() })" completionHandler:nil];
+}
+</code></pre></div></div>
+
+<p>运行之后发现效果非常不错！</p>
+
+<p>但是！</p>
+
+<p>如果有同学之前查过相关问题的话会发现另一个问题：</p>
+
+<p>好多视频播放的网站他的视频播放地址是放在 &lt;iframe&gt; 标签里的！</p>
+
+<p>这就很头疼了……</p>
+
+<p>但是在我查 &lt;iframe&gt; 标签问题的一个偶然的机会下发现了这么一个东西：</p>
+
+<p>** WKNavigationAction **</p>
+
+<p>恰好就在 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler; 中有 WKNavigationAction，经过阅读后了解到：</p>
+<blockquote>
+  <p>这个方法的参数WKNavigationAction中有两个属性: sourceFrame和targetFrame, 分别代表这个action的出处和目标。类型是WKFrameInfo。WKFrameInfo有 一个mainFrame的属性，正是这个属性标记着这个frame是在主frame里还是新开一个frame。如果targetFrame的mainFrame属性为NO，表明这个WKNavigationAction将会新开一个页面。</p>
+</blockquote>
+
+<p>好的！皮卡丘，就决定是你了！</p>
+
+<p>通过对 sourceFrame.mainFrame 和 targetFrame.mainFrame 进行打印后发现正常的打开/跳转 web 页面出现的是 YES &amp; NO 或 NO &amp; YES 这种形式，而&lt;iframe&gt; 标签内链接返回的是 NO &amp; NO 这种形式，因此改为：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// 可以加个判断在主 web URL 加载完成后进行注入， &lt;iframe&gt; 标签是在当前 web 加载完成后立即加载
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+    BOOL sourceIsMain = navigationAction.sourceFrame.mainFrame;
+    BOOL targetIsMain = navigationAction.targetFrame.mainFrame;
+    if !sourceIsMain &amp;&amp; !targetIsMain {
+        // 不允许跳转
+        NSLog(@"不允许跳转");
+        decisionHandler(WKNavigationActionPolicyCancel);
+    } else {
+        // 允许跳转
+        NSLog(@"允许跳转");
+        decisionHandler(WKNavigationActionPolicyAllow);
+    }
+}
+</code></pre></div></div>
+
+<p>再次运行：完美拦截 &lt;iframe&gt; 标签加载造成的多余跳转，且 &lt;iframe&gt; 标签内视频正常播放！</p>
+
+<p>至此，有关 &lt;iframe&gt; 标签加载造成的问题就圆满解决了！</p>
+
+<p>（题外话：在 web 浏览器上点击链接后是新开个标签打开页面还是在当前页面加载是通过是否有 js 的 window.open 来决定的，担心 &lt;iframe&gt; 标签与此同理或近似，但实际测试时发现我们项目新链接的打开时走不走 window.open 的都有切都能正常跳转，因此推测 &lt;iframe&gt; 标签应该与此不同，故可放心使用）</p>
+
+<p>此外，经过近几次项目使用后发现，WKWebView 比 UIWebView 是真的香，但是好多东西一轻量化以后就不好找了，或者说不读官方文档不懂得就多了，与君共勉</p>
+
+  </div><a class="u-url" href="/jekyll/update/2021/01/21/WKWebView%E5%8A%A0%E8%BD%BDweb%E6%97%B6-iframe-%E6%A0%87%E7%AD%BE%E5%8A%A0%E8%BD%BD%E9%97%AE%E9%A2%98.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">无聊的博客</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">无聊的博客</li><li><a class="u-email" href="mailto:songchaoyang@jilinxiangyun.com">songchaoyang@jilinxiangyun.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/LoserForLoser"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">LoserForLoser</span></a></li><li><a href="https://www.twitter.com/%E6%B2%A1+Twitter+%EF%BC%8C%E8%BF%99%E9%87%8C%E6%98%AF%E5%A4%A7%E5%A4%A9%E6%9C%9D%EF%BC%8C%E8%A6%81%E7%BF%BB%E5%A2%99%E7%9A%84%EF%BC%81"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">没 Twitter ，这里是大天朝，要翻墙的！</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>你都无聊到看这里了我还有啥好说的，本人单身狗一个，还不爱研究小玩意，翻墙只会 Shadowsocks 问谷歌。 什么，二维码？很简单，死皮赖脸朋友救济啊！好了，不要打扰我静修了，让我们开启贤者模式吧～～～</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
